@@ -1,0 +1,9 @@
+env:
+  name: MountainCarContinuous-v0
+agent:
+  epsilon: 1
+  gamma: 1
+  alpha: 1
+monitor:
+  num_episodes: 2000
+  window: 100
