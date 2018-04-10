@@ -48,7 +48,7 @@ class Actor():
         loss = K.mean(-actions_gradients * outputs)
 
         # Define optimizer and training function
-        optimizer = optimizers.Adam()
+        optimizer = optimizers.Adam(lr=network_cfg['learning_rate'])
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
         self.train_fn = K.function(
             inputs=[self.model.input, actions_gradients, K.learning_phase()],

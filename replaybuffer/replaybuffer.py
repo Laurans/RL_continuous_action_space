@@ -27,3 +27,9 @@ class ReplayBuffer():
     def __len__(self):
         """Return the current size of internal memory."""
         return len(self.memory)
+
+    def is_sufficient(self):
+        """
+        :return: True if there is sufficient experience stocked
+        """
+        return len(self.memory) > self.batch_size
