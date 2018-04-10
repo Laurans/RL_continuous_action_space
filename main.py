@@ -9,8 +9,7 @@ with open("config.yml", 'r') as ymlfile:
 env = gym.make(cfg['env']['name'])
 cfg['env']['state_size'] = env.observation_space.shape
 cfg['env']['action_size'] = env.action_space.shape
-cfg['env']['action_low'] = env.action_space.low
-cfg['env']['action_high'] = env.action_space.high
+cfg['env']['action_range'] = [env.action_space.low, env.action_space.high]
 
 agent = Agent(cfg)
 avg_rewards, best_avg_reward = interact(env, agent,
