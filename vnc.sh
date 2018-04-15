@@ -5,9 +5,7 @@
 main() {
     log_i "Starting xvfb virtual display..."
     launch_xvfb
-    # log_i "Starting window manager..."
-    # launch_window_manager
-    log_i "Starting jupyter notebooks"
+    log_i "Starting program"
     run_program
     log_i "Starting VNC server..."
     run_vnc_server
@@ -41,24 +39,6 @@ launch_xvfb() {
         if [ ${loopCount} -gt ${timeout} ]
         then
             log_e "xvfb failed to start"
-            exit 1
-        fi
-    done
-}
-
-launch_window_manager() {
-    local timeout=${XVFB_TIMEOUT:-5}
-
-    # Start and wait for either fluxbox to be fully up or we hit the timeout.
-    fluxbox &
-    local loopCount=0
-    until wmctrl -m > /dev/null 2>&1
-    do
-        loopCount=$((loopCount+1))
-        sleep 1
-        if [ ${loopCount} -gt ${timeout} ]
-        then
-            log_e "fluxbox failed to start"
             exit 1
         fi
     done
