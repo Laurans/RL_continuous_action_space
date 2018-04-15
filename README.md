@@ -42,5 +42,9 @@ python main.py
 
 Look at the `config.yml` file to change the parameters of the algorithm.
 
+## Thanks
+
+VNC configuration for docker was inspired by this repo [pascalwhoop/tf_openailab_gpu_docker](https://github.com/pascalwhoop/tf_openailab_gpu_docker)
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
