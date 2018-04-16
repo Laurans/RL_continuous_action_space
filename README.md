@@ -42,6 +42,11 @@ python main.py
 
 Look at the `config.yml` file to change the parameters of the algorithm.
 
+### Unit testing usage
+```
+python -m unittest tests/<script>.py -v
+```
+
 ## Thanks
 
 VNC configuration for docker was inspired by this repo [pascalwhoop/tf_openailab_gpu_docker](https://github.com/pascalwhoop/tf_openailab_gpu_docker)
