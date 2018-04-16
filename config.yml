@@ -1,7 +1,9 @@
 env:
   name: MountainCarContinuous-v0 # MountainCarContinuous-v0 defines "solving" as getting average reward of 90.0 over 100 consecutive trials.
+  seed: 23
 agent:
-  explore: [1.0, 0.01, 0.0001]  # exploration probability at start, minimum exploration probability, exponential decay rate for exploration prob
+  explore: [1.0, 0.01, 0.0001] # exploration probability at start, minimum exploration probability, exponential decay rate for exploration prob
+  noise: [0, 1, 1]  # exploration mu, theta, sigma
   gamma: 0.99  # Also called discount factor
   tau: 0.01
   memory:
@@ -10,13 +12,13 @@ agent:
 
 actor:
   learning_rate: 0.0001
-  hidden_size: [32, 64, 32]
+  hidden_size: [4, 8]
   activation: relu
 
 critic:
   learning_rate: 0.0001
-  hidden_size_states: [32, 64]
-  hidden_size_actions: [32, 64]
+  hidden_size_states: [4, 8]
+  hidden_size_actions: [4, 8]
   activation: relu
 
 monitor:
