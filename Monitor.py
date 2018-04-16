@@ -54,7 +54,7 @@ def interact(env, agent, num_episodes=20000, window=100):
             if avg_reward > best_avg_reward:
                 best_avg_reward = avg_reward
         # monitor progress
-        print("\rEpisode {}/{} || Best average reward {} ".format(i_episode, num_episodes, best_avg_reward), end="")
+        print("\rEpisode {}/{} || Best average reward {} , last samp reward {}".format(i_episode, num_episodes, best_avg_reward, samp_reward), end="")
         sys.stdout.flush()
         if i_episode == num_episodes: print('\n')
     return avg_rewards, best_avg_reward
