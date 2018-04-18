@@ -47,6 +47,7 @@ pyglet==1.3.1
 Pygments==2.2.0
 pygobject==3.20.0
 pyparsing==2.2.0
+PyOpenGL
 python-apt==1.1.0b1+ubuntu0.16.4.1
 python-dateutil==2.6.1
 pytz==2018.3
