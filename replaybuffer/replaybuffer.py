@@ -19,6 +19,12 @@ class ReplayBuffer():
         experience_type = [('state', (np.float32, 2)), ('action', np.float32), ('reward', np.float32),
                            ('next_state', (np.float32, 2)), ('done', np.int32)]
 
+        self.batch_experience_type = [('state', (np.float32, (past_size+1,2))),
+                                      ('action', np.float32),
+                                      ('reward', np.float32),
+                                      ('next_state', (np.float32, (past_size+1,2))),
+                                      ('done', np.int32)]
+
         self.memory = np.zeros(buffer_size, dtype=experience_type)
 
     def add(self, state, action, reward, next_state, done):
@@ -48,7 +54,16 @@ class ReplayBuffer():
         assert index < self.insert_index
         assert index >= self.past_size
 
-        return self.memory[index - self.past_size: index + 1]
+        experience = self.memory[index - self.past_size: index + 1]
+
+        new_experience = np.zeros(1, dtype=self.batch_experience_type)
+        new_experience['state'] = np.vstack(experience['state'])
+        new_experience['action'] = experience['action'][-1]
+        new_experience['next_state'] = np.vstack(experience['next_state'])
+        new_experience['reward'] = experience['reward'][-1]
+        new_experience['done'] = experience['done'][-1]
+
+        return new_experience
 
     def sample(self):
         """Randomly sample a batch of experiences from memory."""

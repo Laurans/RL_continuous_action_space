@@ -9,14 +9,13 @@ agent:
   memory:
     buffer_size: 10000
     batch_size: 64
+    past_size: 1
 
 actor:
-  learning_rate: 0.0001
   hidden_size: [4, 8]
   activation: relu
 
 critic:
-  learning_rate: 0.0001
   hidden_size_states: [4, 8]
   hidden_size_actions: [4, 8]
   activation: relu
