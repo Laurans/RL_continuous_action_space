@@ -1,48 +1,114 @@
-from tensorflow import keras
+import tensorflow as tf
+from utils.function import Function
+
 
 class Critic():
-    def __init__(self, state_shape, action_shape, network_cfg):
+    def __init__(self, state_shape, action_shape, tau, network_cfg):
         """
 
         :param state_shape: Shape of each state
         :param action_shape: Dimension of each action
         :param network_cfg: Dictionary of parameters to build the hidden layers of a neural network
         """
-        self.state_shape = state_shape
-        self.action_shape = action_shape
+        self.state_shape = [None] + state_shape
+        self.action_shape = [None] + action_shape
+        self.tau = tf.constant(tau)
 
-        self.build_model(network_cfg)
+        self.build_graph(network_cfg)
 
-    def build_model(self, network_cfg):
+    def build_graph(self, network_cfg):
+        with tf.variable_scope('critic'):
+            critic_local = CriticNetwork(
+                state_shape=self.state_shape,
+                action_shape=self.action_shape,
+                name='local',
+                network_cfg=network_cfg,
+                reuse=True
+            )
+            critic_local_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                                  scope=tf.get_variable_scope().name + '/local')
 
-        # Inputs
-        states_inputs = keras.Input(shape=self.state_shape, name='states')
-        actions_inputs = keras.Input(shape=self.action_shape,  name='actions')
+            critic_target = CriticNetwork(
+                state_shape=self.state_shape,
+                action_shape=self.action_shape,
+                name='target',
+                network_cfg=network_cfg,
+            )
+            critic_target_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,
+                                                   scope=tf.get_variable_scope().name + '/target')
 
-        # State Branch
-        rnn_layer = keras.layers.SimpleRNN(units=network_cfg['rnn_units'], return_sequences=False)(states_inputs)
+            ## Create a copy function
+            copy_var_local_into_target = []
+            for var, var_target in zip(sorted(critic_local_vars, key=lambda v: v.name),
+                                       sorted(critic_target_vars, key=lambda v: v.name)):
+                copy_var_local_into_target.append(var_target.assign(var))
 
-        # Action Branch
-        batch_norm = keras.layers.BatchNormalization()(actions_inputs)
+            copy_var_local_into_target = tf.group(*copy_var_local_into_target)
 
-        # Union
-        concat = keras.layers.concatenate([batch_norm, rnn_layer])
+            self.copy_local_in_target = Function(updates=[copy_var_local_into_target])
 
-        net = keras.layers.Dense(32, activation='relu')(concat)
-        # Final Branch and output
-        q_values = keras.layers.Dense(1)(net)
+            ## Create a soft update function
+            update_var_target = []
+            for var, var_target in zip(sorted(critic_local_vars, key=lambda v: v.name),
+                                       sorted(critic_target_vars, key=lambda v: v.name)):
+                update_var_target.append(var_target.assign(self.tau * var + (1 - self.tau) * var_target))
 
-        # Keras model
-        self.model = keras.models.Model(inputs=[states_inputs, actions_inputs], outputs=q_values)
+            self.soft_update = Function(updates=[update_var_target])
 
-        # Optimizer
-        optimizer = keras.optimizers.Adam()
-        self.model.compile(optimizer=optimizer, loss='mse')
+            ## Create a predict function
+            self.predict = Function(inputs=[critic_local.states_inputs, critic_local.actions_inputs],
+                                    outputs=[critic_local.output])
 
-        # Definition of action gradient
-        action_gradients = keras.backend.gradients(q_values, actions_inputs)
+            ## Create function to get target
+            self.get_targets = Function(inputs=[critic_target.states_inputs, critic_target.actions_inputs],
+                                    outputs=[critic_target.output])
 
-        # Define an additional function to fetch action gradients (to be used by actor model)
-        self.get_action_gradients = keras.backend.function(
-            inputs=[*self.model.input, keras.backend.learning_phase()],
-            outputs=action_gradients)
+            ## Create a train function
+            self.fit = Function(inputs=[critic_local.states_inputs, critic_local.actions_inputs,
+                                        critic_local.targets],
+                                outputs=[critic_local.loss],
+                                updates=[critic_local.optimizer])
+
+            ## Create a getter to actions gradients
+            self.get_actions_grad = Function(inputs=[critic_local.states_inputs, critic_local.actions_inputs],
+                                             outputs=[critic_local.actions_gradients])
+
+
+class CriticNetwork:
+    def __init__(self, state_shape, action_shape, name, network_cfg, reuse=False, learning_rate=0.01):
+        with tf.variable_scope(name) as scope:
+            # Inputs
+            self.states_inputs = tf.placeholder(tf.float32, state_shape, name='states_inputs')
+            self.actions_inputs = tf.placeholder(tf.float32, action_shape, name='actions_inputs')
+
+            # Target q values for training
+            self.targets = tf.placeholder(tf.float32, [None, 1], name='target_outputs')
+
+            # State Branch
+            state_branch = tf.layers.dense(self.states_inputs, network_cfg['layers'][0],
+                                           activation=tf.nn.relu)
+
+            # Action branch
+            action_branch = tf.layers.dense(self.actions_inputs, network_cfg['layers'][0],
+                                            activation=tf.nn.relu)
+
+            # Merge
+            net = tf.add(state_branch, action_branch)
+
+            # End of network
+            for hidden_units in network_cfg['layers'][1:]:
+                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
+
+            # Output
+            self.output = tf.layers.dense(net, 1, activation=None, name='output')
+
+            # Loss
+            self.loss = tf.losses.mean_squared_error(labels=self.targets,
+                                                     predictions=self.output)
+            # Optimizer
+            self.optimizer = tf.train.AdamOptimizer(learning_rate).minimize(self.loss)
+
+            self.actions_gradients = tf.gradients(self.output, self.actions_inputs)
+
+            if reuse:
+                scope.reuse_variables()

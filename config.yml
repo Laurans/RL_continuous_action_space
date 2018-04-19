@@ -7,19 +7,17 @@ agent:
   gamma: 0.99  # Also called discount factor
   tau: 0.01
   memory:
-    buffer_size: 10000
-    batch_size: 64
-    past_size: 1
+    buffer_size: 1000000
+    batch_size: 32
+    past_size: 10
 
 actor:
-  hidden_size: [4, 8]
-  activation: relu
+  layers: [32, 64, 16]
 
 critic:
-  hidden_size_states: [4, 8]
-  hidden_size_actions: [4, 8]
-  activation: relu
+  layers: [32, 64, 16]
 
 monitor:
   num_episodes: 2000
-  window: 100
+  window: 50
+  render: True

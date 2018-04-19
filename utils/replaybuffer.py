@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 
+
 class ReplayBuffer():
     """Fixed-size buffer to store experience tuples."""
 

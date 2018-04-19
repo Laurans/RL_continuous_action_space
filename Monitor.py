@@ -3,7 +3,7 @@ import sys
 import math
 import numpy as np
 
-def interact(env, agent, num_episodes=20000, window=100):
+def interact(env, agent, num_episodes=20000, window=100, render=False):
     """ Monitor agent's performance.
 
     Params
@@ -50,7 +50,8 @@ def interact(env, agent, num_episodes=20000, window=100):
         # initialize the sampled reward
         samp_reward = 0
         while True:
-            env.render()
+            if render:
+                env.render()
             # agent selects an action
             action = agent.act(state)
             # agent performs the selected action
@@ -77,4 +78,3 @@ def interact(env, agent, num_episodes=20000, window=100):
         print("\rEpisode {}/{} || Best average reward {} , last samp reward {}".format(i_episode, num_episodes, best_avg_reward, samp_reward), end="\t")
         sys.stdout.flush()
         if i_episode == num_episodes: print('\n')
-    return avg_rewards, best_avg_reward
