@@ -13,9 +13,6 @@ RUN pip --no-cache-dir install -r requirements_docker.txt
 
 EXPOSE 5900
 
-# Make port 8888 available to the world outside this container
-EXPOSE 8888
-
 COPY vnc.sh /
 RUN chmod +x "/vnc.sh"
 
