@@ -1,5 +1,5 @@
 import unittest
-from replaybuffer.replaybuffer import ReplayBuffer
+from utils.replaybuffer import ReplayBuffer
 import numpy as np
 
 
