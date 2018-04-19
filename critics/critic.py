@@ -1,53 +1,48 @@
-from keras import layers, models, optimizers
-from keras import backend as K
+from tensorflow import keras
 
 class Critic():
-    def __init__(self, state_size, action_size, network_cfg):
+    def __init__(self, state_shape, action_shape, network_cfg):
         """
 
-        :param state_size: Dimension of each state
-        :param action_size: Dimension of each action
+        :param state_shape: Shape of each state
+        :param action_shape: Dimension of each action
         :param network_cfg: Dictionary of parameters to build the hidden layers of a neural network
         """
-        self.state_size = state_size
-        self.action_size = action_size
+        self.state_shape = state_shape
+        self.action_shape = action_shape
 
         self.build_model(network_cfg)
 
     def build_model(self, network_cfg):
-        # Placeholder
-        states = layers.Input(shape=(self.state_size,), name='states')
-        actions = layers.Input(shape=(self.action_size,), name='actions')
 
-        # Hidden layers
-        net_states = None
-        for i, size in enumerate(network_cfg['hidden_size_states']):
-            previous = net_states if i > 0 else states
-            net_states = layers.Dense(units=size, activation='relu', name='dense_state_' + str(i))(previous)
+        # Inputs
+        states_inputs = keras.Input(shape=self.state_shape, name='states')
+        actions_inputs = keras.Input(shape=self.action_shape,  name='actions')
 
-        net_actions = None
-        for i, size in enumerate(network_cfg['hidden_size_actions']):
-            previous = net_actions if i > 0 else actions
-            net_actions = layers.Dense(units=size, activation='relu', name='dense_action_' + str(i))(previous)
+        # State Branch
+        rnn_layer = keras.layers.SimpleRNN(units=network_cfg['rnn_units'], return_sequences=False)(states_inputs)
 
-        # Combine pathways
-        net = layers.Add()([net_states, net_actions])
-        net = layers.Activation('relu')(net)
+        # Action Branch
+        batch_norm = keras.layers.BatchNormalization()(actions_inputs)
 
-        # Q_values output
-        outputs = layers.Dense(units=1, name='q_values')(net)
+        # Union
+        concat = keras.layers.concatenate([batch_norm, rnn_layer])
+
+        net = keras.layers.Dense(32, activation='relu')(concat)
+        # Final Branch and output
+        q_values = keras.layers.Dense(1)(net)
 
         # Keras model
-        self.model = models.Model(inputs=[states, actions], outputs=outputs)
+        self.model = keras.models.Model(inputs=[states_inputs, actions_inputs], outputs=q_values)
 
-        # Loss function
-        optimizer = optimizers.Adam()
+        # Optimizer
+        optimizer = keras.optimizers.Adam()
         self.model.compile(optimizer=optimizer, loss='mse')
 
-        # Compute action gradients (derivative of Q values w.r.t. to actions)
-        action_gradients = K.gradients(outputs, actions)
+        # Definition of action gradient
+        action_gradients = keras.backend.gradients(q_values, actions_inputs)
 
         # Define an additional function to fetch action gradients (to be used by actor model)
-        self.get_action_gradients = K.function(
-            inputs=[*self.model.input, K.learning_phase()],
+        self.get_action_gradients = keras.backend.function(
+            inputs=[*self.model.input, keras.backend.learning_phase()],
             outputs=action_gradients)
