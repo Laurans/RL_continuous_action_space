@@ -10,8 +10,8 @@ env = gym.make(cfg['env']['name'])
 
 # Set a seed
 env.seed(cfg['env']['seed'])
-cfg['env']['state_size'] = env.observation_space.shape
-cfg['env']['action_size'] = env.action_space.shape
+cfg['agent']['memory']['state_shape'] = list(env.observation_space.shape)
+cfg['env']['action_shape'] = list(env.action_space.shape)
 cfg['env']['action_range'] = [env.action_space.low, env.action_space.high]
 
 agent = Agent(cfg)
