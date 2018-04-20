@@ -64,10 +64,10 @@ class Critic():
                                     outputs=[critic_target.output])
 
             ## Create a train function
-            loss_summary = tf.summary.scalar('critic_local_loss', critic_local.loss)
+            #loss_summary = tf.summary.scalar('critic_local_loss', critic_local.loss)
             self.fit = Function(inputs=[critic_local.states_inputs, critic_local.actions_inputs,
                                         critic_local.targets],
-                                outputs=[loss_summary],
+                                outputs=[critic_local.loss],
                                 updates=[critic_local.optimizer])
 
 
@@ -98,13 +98,12 @@ class CriticNetwork:
 
             # Merge
             net = tf.add(state_branch, action_branch)
-            net = tf.layers.batch_normalization(net)
+
 
             # End of network
             for hidden_units in network_cfg['layers'][1:]:
-                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
                 net = tf.layers.batch_normalization(net)
-
+                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
             # Output
             self.output = tf.layers.dense(net, 1, activation=None, name='output')
 

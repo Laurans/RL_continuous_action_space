@@ -89,11 +89,11 @@ class ActorNetwork:
             self.actions_grad = tf.placeholder(tf.float32, action_shape, name='actions_grad_inputs')
 
             # Network
-            net = tf.layers.batch_normalization(self.states_inputs)
+            net = self.states_inputs
 
             for hidden_units in network_cfg['layers']:
-                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
                 net = tf.layers.batch_normalization(net)
+                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
 
             # Output
             raw_actions = tf.layers.dense(net, action_shape[-1], activation=tf.nn.sigmoid, name='raw_actions')
