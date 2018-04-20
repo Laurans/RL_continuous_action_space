@@ -103,5 +103,6 @@ ENV/
 # PyCharm
 .idea/
 
-# Draft script
-*_0.py
+# Checkpoints
+checkpoints/
+logs/
