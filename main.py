@@ -1,11 +1,19 @@
+# REMOVE VERBOSE
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+
+import warnings
+warnings.filterwarnings('ignore')
+
 from agents.agent import Agent
 from Monitor import interact
 import gym
 import yaml
 import tensorflow as tf
 
-import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+
+
+
 
 with open("config.yml", 'r') as ymlfile:
     cfg = yaml.load(ymlfile)

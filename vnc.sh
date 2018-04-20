@@ -61,13 +61,8 @@ run_vnc_server() {
         log_w "The VNC server will NOT ask for a password"
     fi
 
-    x11vnc -display ${DISPLAY} -forever ${passwordArgument} &
+    x11vnc -display ${DISPLAY} -forever ${passwordArgument} -quiet &
     wait $!
-}
-
-run_jupyter(){
-	cd /workspace
-	jupyter notebook --ip='*' --port=8888 --no-browser --allow-root &
 }
 
 run_program(){
