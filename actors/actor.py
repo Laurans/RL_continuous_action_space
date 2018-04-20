@@ -3,23 +3,19 @@ import tensorflow as tf
 
 class Actor():
 
-    def __init__(self, state_shape, action_shape, action_range, tau, network_cfg):
+    def __init__(self, state_shape, action_shape, action_range, tau, batch_size, network_cfg):
         """ Initialize parameters and build model
-
-        :param state_shape: Shape of each state
-        :param action_shape: Dimension of each action
-        :param action_low: Min value of each action
-        :param action_high: Max value of each action
-        :param network_cfg: Dictionary of parameters to build the hidden layers of a neural network
         """
 
         self.state_shape = [None] + state_shape
         self.action_shape = [None] + action_shape
+        self.batch_size = batch_size
         self.tau = tf.constant(tau)
 
         action_low, action_high = action_range
         network_cfg['action_range'] = tf.constant(action_high - action_low)
         network_cfg['action_low'] = tf.constant(action_low)
+
         # Initialize a model
         self.build_model(network_cfg)
 
@@ -72,13 +68,19 @@ class Actor():
                                     outputs=[actor_target.output])
 
             ## Create a train function
+
+            trainable_vars = tf.trainable_variables(scope=tf.get_variable_scope().name + '/local')
+            actor_grad = tf.gradients(actor_local.output, trainable_vars, grad_ys=-actor_local.actions_grad)
+            actor_grad = list(map(lambda x: tf.div(x, self.batch_size), actor_grad))
+
+            optimizer = actor_local.train_op.apply_gradients(zip(actor_grad, trainable_vars))
+
             self.fit = Function(inputs=[actor_local.states_inputs, actor_local.actions_grad],
-                                outputs=[actor_local.loss],
-                                updates=[actor_local.optimizer])
+                               updates=[optimizer])
 
 
 class ActorNetwork:
-    def __init__(self, state_shape, action_shape, name, network_cfg, reuse=False, learning_rate=0.01):
+    def __init__(self, state_shape, action_shape, name, network_cfg, reuse=False):
         with tf.variable_scope(name) as scope:
             # Inputs
             self.states_inputs = tf.placeholder(tf.float32, state_shape, name='states_inputs')
@@ -87,21 +89,21 @@ class ActorNetwork:
             self.actions_grad = tf.placeholder(tf.float32, action_shape, name='actions_grad_inputs')
 
             # Network
-            net = tf.layers.dense(self.states_inputs, network_cfg['layers'][0], activation=tf.nn.relu)
+            net = tf.layers.batch_normalization(self.states_inputs)
 
-            for hidden_units in network_cfg['layers'][1:]:
+            for hidden_units in network_cfg['layers']:
                 net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
+                net = tf.layers.batch_normalization(net)
 
             # Output
             raw_actions = tf.layers.dense(net, action_shape[-1], activation=tf.nn.sigmoid, name='raw_actions')
             self.output = network_cfg['action_range'] * raw_actions + network_cfg['action_low']
-                                           
-
-            # Loss
-            self.loss = tf.reduce_mean(-self.actions_grad*self.output)
 
             # Optimizer
-            self.optimizer = tf.train.AdamOptimizer(learning_rate).minimize(self.loss)
+            self.train_op = tf.train.AdamOptimizer(network_cfg['learning_rate'])
 
             if reuse:
                 scope.reuse_variables()
+
+
+

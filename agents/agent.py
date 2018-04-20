@@ -23,10 +23,10 @@ class Agent():
         self.gamma = cfg['agent']['gamma']
         self.tau = cfg['agent']['tau']
 
-
         state_flatten_shape = [np.prod(self.memory.window_state_shape)]
         # Actor Model
-        self.actor = Actor(state_flatten_shape, self.action_shape, cfg['env']['action_range'], self.tau, cfg['actor'])
+        self.actor = Actor(state_flatten_shape, self.action_shape, cfg['env']['action_range'],
+                           self.tau, self.memory.batch_size, cfg['actor'])
 
         # Critic Model
         self.critic = Critic(state_flatten_shape, self.action_shape, self.tau, cfg['critic'])
@@ -44,7 +44,7 @@ class Agent():
 
         # Learn, if at end of episode
         if done and self.memory.is_sufficient():
-            self.learn()
+            return self.learn()
 
     def act(self, state):
         self.last_state = state
@@ -52,7 +52,7 @@ class Agent():
         window_states = self.memory.get_last_past_states(state).reshape(1, -1)
         action = self.actor.predict(window_states) + self.noise.sample()
 
-        return action
+        return np.clip(action, -1, 1)
 
     def learn(self):
         experiences = self.memory.sample()
@@ -70,7 +70,7 @@ class Agent():
 
         # Compute Q targets for current states and train critic model
         Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-        self.critic.fit(states, actions, Q_targets)
+        summary = self.critic.fit(states, actions, Q_targets)
 
         # Train actor model
         action_gradients = self.critic.get_actions_grad(states, actions)[0]
@@ -79,3 +79,4 @@ class Agent():
         # Soft-update target models
         self.critic.soft_update()
         self.actor.soft_update()
+        return summary

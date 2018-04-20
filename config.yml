@@ -3,21 +3,24 @@ env:
   seed: 23
 agent:
   explore: [1.0, 0.01, 0.0001] # exploration probability at start, minimum exploration probability, exponential decay rate for exploration prob
-  noise: [0, 1, 1]  # exploration mu, theta, sigma
+  noise: [0, 1, 1 ]  # exploration mu, theta, sigma
   gamma: 0.99  # Also called discount factor
-  tau: 0.01
+  tau: 0.001
   memory:
-    buffer_size: 1000000
-    batch_size: 32
-    past_size: 10
+    buffer_size: 10000000
+    batch_size: 128
+    past_size: 20
 
 actor:
-  layers: [32, 64, 16]
+  learning_rate: 0.0001
+  layers: [64, 64]
 
 critic:
-  layers: [32, 64, 16]
+  learning_rate: 0.001
+  layers: [64, 64]
 
 monitor:
   num_episodes: 2000
-  window: 50
+  num_init_episodes: 200
+  window: 100
   render: True

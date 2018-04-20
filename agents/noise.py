@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 
+np.random.seed(24)
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 

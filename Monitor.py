@@ -2,8 +2,10 @@ from collections import deque
 import sys
 import math
 import numpy as np
+import tensorflow as tf
 
-def interact(env, agent, num_episodes=20000, window=100, render=False):
+
+def interact(env, agent, saver, sess, writer, num_episodes=20000, window=100, num_init_episodes=100, render=False):
     """ Monitor agent's performance.
 
     Params
@@ -24,8 +26,8 @@ def interact(env, agent, num_episodes=20000, window=100, render=False):
     best_avg_reward = -math.inf
     # initialize monitor for most recent rewards
 
-    # Random episode
-    for i_episode in range(1, num_episodes//2+1):
+    # Random episodes
+    for i_episode in range(1, num_init_episodes+1):
         state = env.reset()
         while True:
             action = env.action_space.sample()
@@ -39,10 +41,11 @@ def interact(env, agent, num_episodes=20000, window=100, render=False):
 
             agent.memory.add(state, action, reward, next_state, done)
             state = next_state
-        print("\rEpisode {}/{} || RANDOM ".format(i_episode, num_episodes//2),end="\t")
+        print("\rEpisode {}/{} || RANDOM {}/{}".format(i_episode, num_init_episodes, len(agent.memory), agent.memory.max_size), end="\t")
         sys.stdout.flush()
 
     samp_rewards = deque(maxlen=window)
+    step = 0
     # for each episode
     for i_episode in range(1, num_episodes + 1):
         # begin the episode
@@ -50,6 +53,7 @@ def interact(env, agent, num_episodes=20000, window=100, render=False):
         # initialize the sampled reward
         samp_reward = 0
         while True:
+            step += 1
             if render:
                 env.render()
             # agent selects an action
@@ -57,7 +61,9 @@ def interact(env, agent, num_episodes=20000, window=100, render=False):
             # agent performs the selected action
             next_state, reward, done, _ = env.step(action)
             # agent performs internal updates based on sampled experience
-            agent.step(action, reward, next_state, done)
+            summaries = agent.step(action, reward, next_state, done)
+            if summaries is not None:
+                writer.add_summary(summaries, step)
             # update the sampled reward
             samp_reward += reward
             # update the state (s <- s') to next time step
@@ -77,4 +83,9 @@ def interact(env, agent, num_episodes=20000, window=100, render=False):
         # monitor progress
         print("\rEpisode {}/{} || Best average reward {} , last samp reward {}".format(i_episode, num_episodes, best_avg_reward, samp_reward), end="\t")
         sys.stdout.flush()
-        if i_episode == num_episodes: print('\n')
+
+        if i_episode % 300 == 0:
+            saver.save(sess, "checkpoints/{}_{}.ckpt".format('exp1', i_episode))
+        if i_episode == num_episodes:
+            saver.save(sess, "checkpoints/{}_{}.ckpt".format('exp1', 'final'))
+            writer.close()
