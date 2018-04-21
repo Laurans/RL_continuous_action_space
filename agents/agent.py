@@ -1,5 +1,5 @@
 import numpy as np
-from utils.replaybuffer import ReplayBuffer
+from utils.prioritizedreplaybuffer import PrioritizedReplayBuffer
 from actors.actor import Actor
 from critics.critic import Critic
 from agents.noise import OUNoise
@@ -10,7 +10,7 @@ class Agent():
         """
 
         # Replay memory
-        self.memory = ReplayBuffer(**cfg['agent']['memory'])
+        self.memory = PrioritizedReplayBuffer(**cfg['agent']['memory'])
 
         # Environment configuration
 
@@ -23,7 +23,7 @@ class Agent():
         self.gamma = cfg['agent']['gamma']
         self.tau = cfg['agent']['tau']
 
-        state_flatten_shape = [np.prod(self.memory.window_state_shape)]
+        state_flatten_shape = [np.prod(self.memory.flatten_state_shape)]
         # Actor Model
         self.actor = Actor(state_flatten_shape, self.action_shape, cfg['env']['action_range'],
                            self.tau, self.memory.batch_size, cfg['actor'])
@@ -44,12 +44,12 @@ class Agent():
 
         # Learn, if at end of episode
         if done and self.memory.is_sufficient():
-            return self.learn()
+            self.learn()
 
-    def act(self, state):
+    def act(self, state, training=False):
         self.last_state = state
 
-        window_states = self.memory.get_last_past_states(state).reshape(1, -1)
+        window_states = self.memory.get_state_vector(state).reshape(1, -1)
         action = self.actor.predict(window_states) + self.noise.sample()
 
         return np.clip(action, -1, 1)
@@ -79,4 +79,3 @@ class Agent():
         # Soft-update target models
         self.critic.soft_update()
         self.actor.soft_update()
-        return summary
