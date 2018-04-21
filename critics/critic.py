@@ -64,11 +64,14 @@ class Critic():
                                     outputs=[critic_target.output])
 
             ## Create a train function
-            #loss_summary = tf.summary.scalar('critic_local_loss', critic_local.loss)
+
+            trainable_vars = tf.trainable_variables(scope=tf.get_variable_scope().name + '/local')
+            grads = tf.gradients(critic_local.loss*critic_local.IS_weights, trainable_vars)
+            optimizer = critic_local.train_op.apply_gradients(zip(grads, trainable_vars))
+
             self.fit = Function(inputs=[critic_local.states_inputs, critic_local.actions_inputs,
-                                        critic_local.targets],
-                                outputs=[critic_local.loss],
-                                updates=[critic_local.optimizer])
+                                        critic_local.targets, critic_local.IS_weights],
+                                updates=[optimizer])
 
 
             ## Create a getter to actions gradients
@@ -85,6 +88,7 @@ class CriticNetwork:
 
             # Target q values for training
             self.targets = tf.placeholder(tf.float32, [None, 1], name='target_outputs')
+            self.IS_weights = tf.placeholder(tf.float32, [None, 1], name='importance_sampling_weights')
 
             # State Branch
             state_branch = tf.layers.batch_normalization(self.states_inputs)
@@ -112,7 +116,7 @@ class CriticNetwork:
                                                      predictions=self.output)
 
             # Optimizer
-            self.optimizer = tf.train.AdamOptimizer(network_cfg['learning_rate']).minimize(self.loss)
+            self.train_op = tf.train.AdamOptimizer(network_cfg['learning_rate'])
 
             self.actions_gradients = tf.gradients(self.output, self.actions_inputs)
 

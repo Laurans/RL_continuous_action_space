@@ -55,7 +55,7 @@ class Agent():
         return np.clip(action, -1, 1)
 
     def learn(self):
-        experiences = self.memory.sample()
+        experiences, weights = self.memory.sample()
 
         states = experiences['state'][:, 0].reshape(self.memory.batch_size, -1)
         actions = experiences['action']
@@ -70,7 +70,11 @@ class Agent():
 
         # Compute Q targets for current states and train critic model
         Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-        summary = self.critic.fit(states, actions, Q_targets)
+
+        TD_error = Q_targets - self.critic.predict(states, actions)
+        self.memory.update_priority(TD_error)
+
+        self.critic.fit(states, actions, Q_targets, weights)
 
         # Train actor model
         action_gradients = self.critic.get_actions_grad(states, actions)[0]
