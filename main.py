@@ -6,14 +6,10 @@ import warnings
 warnings.filterwarnings('ignore')
 
 from agents.agent import Agent
-from Monitor import interact
+from Monitor import training
 import gym
 import yaml
 import tensorflow as tf
-
-
-
-
 
 with open("config.yml", 'r') as ymlfile:
     cfg = yaml.load(ymlfile)
@@ -36,13 +32,14 @@ else:
 
 with tf.Session() as sess:
     agent = Agent(cfg)
-    writer = tf.summary.FileWriter("./logs/", sess.graph)
+    writer = tf.summary.FileWriter("./logs/{}".format(cfg['monitor']['exp_name']), sess.graph)
     sess.run(tf.global_variables_initializer())
     agent.init_actor_critic()
 
     saver = tf.train.Saver()
-    interact(env, agent, saver, sess, writer,
+    training(env, agent, saver, sess, writer,
              cfg['monitor']['num_episodes'],
              cfg['monitor']['window'],
              cfg['monitor']['num_init_episodes'],
-             cfg['monitor']['render'])
+             cfg['monitor']['render'],
+             cfg['monitor']['exp_name'])
