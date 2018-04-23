@@ -50,6 +50,7 @@ python -m unittest tests/<script>.py -v
 ## Thanks
 
 VNC configuration for docker was inspired by this repo [pascalwhoop/tf_openailab_gpu_docker](https://github.com/pascalwhoop/tf_openailab_gpu_docker)
+Sum tree inspired by takoika/PrioritizedExperienceReplay
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
