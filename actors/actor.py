@@ -75,7 +75,13 @@ class Actor():
 
             optimizer = actor_local.train_op.apply_gradients(zip(actor_grad, trainable_vars))
 
+            weights = [tf.summary.histogram(str(vars.name), vars) for vars in trainable_vars if 'dense' in vars.name]
+            weights += [tf.summary.histogram('output', actor_local.output)]
+            weights += [tf.summary.histogram(str(vars.name), vars) for vars, vars_orig in zip(actor_grad, trainable_vars) if 'dense' in vars_orig.name]
+            summaries = tf.summary.merge(weights)
+
             self.fit = Function(inputs=[actor_local.states_inputs, actor_local.actions_grad],
+                                outputs=[summaries],
                                updates=[optimizer])
 
 
@@ -93,7 +99,8 @@ class ActorNetwork:
 
             for hidden_units in network_cfg['layers']:
                 net = tf.layers.batch_normalization(net)
-                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
+                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
 
             # Output
             raw_actions = tf.layers.dense(net, action_shape[-1], activation=tf.nn.sigmoid, name='raw_actions')

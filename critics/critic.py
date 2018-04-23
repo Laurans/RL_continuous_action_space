@@ -65,13 +65,15 @@ class Critic():
 
             ## Create a train function
 
-            trainable_vars = tf.trainable_variables(scope=tf.get_variable_scope().name + '/local')
-            grads = tf.gradients(critic_local.loss*critic_local.IS_weights, trainable_vars)
-            optimizer = critic_local.train_op.apply_gradients(zip(grads, trainable_vars))
+            summaries = tf.summary.merge([
+                tf.summary.scalar('loss', critic_local.loss),
+                tf.summary.histogram('output', critic_local.output)
+            ])
 
             self.fit = Function(inputs=[critic_local.states_inputs, critic_local.actions_inputs,
-                                        critic_local.targets, critic_local.IS_weights],
-                                updates=[optimizer])
+                                        critic_local.targets],
+                                outputs=[summaries],
+                                updates=[critic_local.optimizer])
 
 
             ## Create a getter to actions gradients
@@ -88,26 +90,28 @@ class CriticNetwork:
 
             # Target q values for training
             self.targets = tf.placeholder(tf.float32, [None, 1], name='target_outputs')
-            self.IS_weights = tf.placeholder(tf.float32, [None, 1], name='importance_sampling_weights')
 
             # State Branch
             state_branch = tf.layers.batch_normalization(self.states_inputs)
             state_branch = tf.layers.dense(state_branch, network_cfg['layers'][0],
-                                           activation=tf.nn.relu)
+                                           activation=tf.nn.relu,
+                                           kernel_initializer=tf.contrib.layers.xavier_initializer())
 
             # Action branch
             action_branch = tf.layers.batch_normalization(self.actions_inputs)
             action_branch = tf.layers.dense(action_branch, network_cfg['layers'][0],
-                                            activation=tf.nn.relu)
+                                            activation=tf.nn.relu,
+                                            kernel_initializer=tf.contrib.layers.xavier_initializer())
 
             # Merge
-            net = tf.add(state_branch, action_branch)
+            net = tf.concat([state_branch, action_branch], axis=1)
 
 
             # End of network
             for hidden_units in network_cfg['layers'][1:]:
                 net = tf.layers.batch_normalization(net)
-                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu)
+                net = tf.layers.dense(net, hidden_units, activation=tf.nn.relu,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
             # Output
             self.output = tf.layers.dense(net, 1, activation=None, name='output')
 
@@ -116,7 +120,7 @@ class CriticNetwork:
                                                      predictions=self.output)
 
             # Optimizer
-            self.train_op = tf.train.AdamOptimizer(network_cfg['learning_rate'])
+            self.optimizer = tf.train.AdamOptimizer(network_cfg['learning_rate']).minimize(self.loss)
 
             self.actions_gradients = tf.gradients(self.output, self.actions_inputs)
 

@@ -28,7 +28,7 @@ class ReplayBuffer():
         self.reset_past()
 
         self.cursor_insert = 0
-        self.cursor_full = 0
+        self.cursor_size = 0
 
         self.memory = np.zeros(buffer_size, dtype=self.experience_type)
 
@@ -54,19 +54,19 @@ class ReplayBuffer():
 
         self.cursor_insert = (self.cursor_insert + 1) % self.max_size
 
-        if self.cursor_full < self.max_size:
-            self.cursor_full += 1
+        if self.cursor_size < self.max_size:
+            self.cursor_size += 1
 
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
-        indices = np.random.choice(np.arange(self.cursor_full), size=self.batch_size, replace=False)
+        indices = np.random.choice(np.arange(self.cursor_size), size=self.batch_size, replace=False)
 
         return np.vstack(self.memory[indices])
 
     def __len__(self):
         """Return the current size of internal memory."""
-        return self.cursor_full
+        return self.cursor_size
 
     def is_sufficient(self):
         """Return True if we can start sampling"""
-        return len(self.memory) > self.batch_size
+        return len(self) > self.batch_size*3

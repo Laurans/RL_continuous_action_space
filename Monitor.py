@@ -5,7 +5,8 @@ import numpy as np
 import tensorflow as tf
 
 
-def interact(env, agent, saver, sess, writer, num_episodes=20000, window=100, num_init_episodes=100, render=False):
+def training(env, agent, saver, sess, writer, num_episodes=20000, window=100, num_init_episodes=100, render=False,
+             exp_name='exp'):
     """ Monitor agent's performance.
 
     Params
@@ -20,45 +21,22 @@ def interact(env, agent, saver, sess, writer, num_episodes=20000, window=100, nu
     - avg_rewards: deque containing average rewards
     - best_avg_reward: largest value in the avg_rewards deque
     """
-    # initialize average rewards
-    avg_rewards = deque(maxlen=num_episodes)
     # initialize best average reward
     best_avg_reward = -math.inf
-    # initialize monitor for most recent rewards
+    best_reward = -math.inf
 
-    # Random episodes
-    for i_episode in range(1, num_init_episodes+1):
-        state = env.reset()
-        while True:
-            action = env.action_space.sample()
-            next_state, reward, done, _ = env.step(action)
-
-
-            if done:
-                next_state = np.zeros(state.shape)
-                agent.memory.add(state, action, reward, next_state, done)
-                break
-
-            agent.memory.add(state, action, reward, next_state, done)
-            state = next_state
-        print("\rEpisode {}/{} || RANDOM {}/{}".format(i_episode, num_init_episodes, len(agent.memory), agent.memory.max_size), end="\t")
-        sys.stdout.flush()
-
-    samp_rewards = deque(maxlen=window)
-    step = 0
-
+    episode_rewards_history = deque(maxlen=100)
+    iterations = 0
 
     # for each episode
-    for i_episode in range(1, num_episodes + 1):
-        # begin the episode
+    for i_episode in range(1, num_episodes+1):
+        episode_steps = 0
+        episode_score = 0
         state = env.reset()
-        # initialize the sampled reward
-        samp_reward = 0
+        agent.reset()
+        agent.add_noise = True
 
         while True:
-            step += 1
-            if render:
-                env.render()
             # agent selects an action
             action = agent.act(state)
             # agent performs the selected action
@@ -66,41 +44,71 @@ def interact(env, agent, saver, sess, writer, num_episodes=20000, window=100, nu
             # agent performs internal updates based on sampled experience
             agent.step(action, reward, next_state, done)
 
-            # update the sampled reward
-            samp_reward += reward
+            # LEARNING ----------------------------------------------------------------
+            learning_summaries = agent.learn()
+            if learning_summaries is not None:
+                for s in learning_summaries:
+                    if type(s) == list:
+                        for e in s:
+                            writer.add_summary(e, iterations)
+                    else:
+                        writer.add_summary(s, iterations)
+            # UPDATE METRICS ----------------
+            episode_score += reward
+            episode_steps += 1
+            iterations += 1
             # update the state (s <- s') to next time step
             state = next_state
+            # DONE --------------
             if done:
-                # save final sampled reward
-                samp_rewards.append(samp_reward)
-                # Reset past memory
-                agent.memory.reset_past()
+                agent.episode += 1
+                episode_rewards_history.append(episode_score)
+                best_reward = max(best_reward, episode_score)
                 break
-        if (i_episode >= 100):
-            # get average reward from last 100 episodes
-            avg_reward = np.mean(samp_rewards)
-            # append to deque
-            avg_rewards.append(avg_reward)
-            # update best average reward
-            if avg_reward > best_avg_reward:
-                best_avg_reward = avg_reward
 
-            reward_log = tf.Summary()
-            reward_log.value.add(tag='100-mean_reward', simple_value=avg_reward)
-            writer.add_summary(reward_log, i_episode)
+        if i_episode > 100:
+            best_avg_reward = max(best_avg_reward, np.mean(episode_rewards_history))
 
-            best_reward_log = tf.Summary()
-            best_reward_log.value.add(tag='best_100-mean_reward', simple_value=best_avg_reward)
-            writer.add_summary(best_reward_log, i_episode)
+        print("Iter {} | Episode {}/{} | Score {} | Step {} \t Best avg reward {} | Best reward {}".format(
+            iterations, i_episode, num_episodes, episode_score, episode_steps, best_avg_reward, best_reward))
 
-            writer.flush()
+        train_score = tf.Summary()
+        train_score.value.add(tag='train/score', simple_value=episode_score)
+        writer.add_summary(train_score, i_episode)
 
-        # monitor progress
-        print("\rEpisode {}/{} || Best average reward {} , last samp reward {}".format(i_episode, num_episodes, best_avg_reward, samp_reward), end="\t")
-        sys.stdout.flush()
+        train_best_avg = tf.Summary()
+        train_best_avg.value.add(tag='train/best_avg_score', simple_value=best_avg_reward)
+        writer.add_summary(train_best_avg, i_episode)
 
-        if i_episode % 300 == 0:
-            saver.save(sess, "checkpoints/{}_{}.ckpt".format('exp1', i_episode))
-        if i_episode == num_episodes:
-            saver.save(sess, "checkpoints/{}_{}.ckpt".format('exp1', 'final'))
-            writer.close()
+        # TESTING ----------------------------------------------------------------
+        agent.add_noise = False
+        state = env.reset()
+        agent.reset()
+        episode_score = 0
+        episode_steps = 0
+
+        while True:
+            action = agent.act(state)
+            next_state, reward, done, _ = env.step(action)
+            agent.step(action, reward, next_state, done)
+            episode_score += reward
+            episode_steps += 1
+            state = next_state
+            if done:
+                print("Testing at {} | Reward {} | Step {}".format(i_episode, episode_score, episode_steps))
+
+                eval_score = tf.Summary()
+                eval_score.value.add(tag='eval/score', simple_value=episode_score)
+                writer.add_summary(eval_score, i_episode)
+
+                eval_episode_steps = tf.Summary()
+                eval_episode_steps.value.add(tag='eval/episode_steps', simple_value=episode_steps)
+                writer.add_summary(eval_episode_steps, i_episode)
+
+                break
+
+        if i_episode % 50 == 0:
+            saver.save(sess, "checkpoints/{}/{}.ckpt".format(exp_name, i_episode))
+    saver.save(sess, "checkpoints/{}/{}.ckpt".format(exp_name, 'final'))
+    writer.close()
+
