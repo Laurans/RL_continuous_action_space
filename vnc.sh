@@ -66,6 +66,9 @@ run_vnc_server() {
 }
 
 run_program(){
+    local now=`date '+%y%m%d_%H%M%S'`
+    tar --exclude='/workspace/logs' --exclude='/workspace/checkpoints' -czf "/backup/rl_cas_code_source__${now}.tar.gz" workspace/
+    chown -R `stat -c "%u:%g" /backup` /backup
 	cd /workspace
 	python main.py &
 }

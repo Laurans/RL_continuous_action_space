@@ -3,7 +3,7 @@ FROM tensorflow/tensorflow:latest-gpu-py3
 # Set the working directory to /workspace
 WORKDIR /workspace
 
-RUN apt-get update && apt-get install -y git freeglut3-dev x11vnc xvfb wmctrl
+RUN mkdir /backup && apt-get update && apt-get install -y git freeglut3-dev x11vnc xvfb wmctrl
 
 COPY requirements_docker.txt ./
 
