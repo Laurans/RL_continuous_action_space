@@ -70,3 +70,12 @@ class ReplayBuffer():
     def is_sufficient(self):
         """Return True if we can start sampling"""
         return len(self) > self.batch_size*3
+
+    def mean(self):
+        return np.mean(self.memory['reward'][:self.cursor_size])
+
+    def min(self):
+        return np.min(self.memory['reward'][:self.cursor_size])
+
+    def max(self):
+        return np.max(self.memory['reward'][:self.cursor_size])

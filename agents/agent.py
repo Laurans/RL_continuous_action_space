@@ -89,11 +89,9 @@ class Agent():
             self.critic.soft_update()
             self.actor.soft_update()
 
-            summary_reward = summary('rewards', rewards)
-            summary_dones = summary('dones', dones)
-            summary_actions = summary('actions', actions)
+            summary_reward = summary('sample_rewards', rewards)
 
-            return critic_summaries, actor_summaries, summary_reward, summary_dones, summary_actions
+            return critic_summaries, actor_summaries, summary_reward
 
 def summary(tag, values):
 
@@ -106,9 +104,6 @@ def summary(tag, values):
         )]),
         tf.Summary(value=[tf.Summary.Value(
             tag='memory/{}/mean'.format(tag), simple_value=np.mean(values)
-        )]),
-        tf.Summary(value=[tf.Summary.Value(
-            tag='memory/{}/sum'.format(tag), simple_value=np.sum(values)
         )]),
     ]
 

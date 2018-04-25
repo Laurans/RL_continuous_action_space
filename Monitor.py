@@ -106,7 +106,9 @@ def training(env, agent, saver, sess, writer, num_episodes=20000, window=100, nu
                 writer.add_summary(eval_episode_steps, i_episode)
 
                 break
-
+        print("Memory {}/{} | Mean {} | Min {} | Max {}".format(
+            len(agent.memory), len(agent.memory.memory), agent.memory.mean(), agent.memory.min(), agent.memory.max()))
+        print()
         if i_episode % 50 == 0:
             saver.save(sess, "checkpoints/{}/{}.ckpt".format(exp_name, i_episode))
     saver.save(sess, "checkpoints/{}/{}.ckpt".format(exp_name, 'final'))
