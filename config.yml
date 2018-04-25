@@ -7,7 +7,7 @@ agent:
   gamma: 0.99  # Also called discount factor
   tau: 0.001
   memory:
-    buffer_size: 10000
+    buffer_size: 1000000
     batch_size: 128
     past_size: 20
 
